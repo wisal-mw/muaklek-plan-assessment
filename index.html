@@ -164,10 +164,9 @@
                     ฐานข้อมูลพร้อมใช้งาน
                 </span>
                 <span id="syncTimestampText" class="text-slate-600">เชื่อมต่อ Google Sheets 2 แหล่ง</span>
-                <label class="inline-flex items-center gap-1.5 cursor-pointer bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-full">
-                    <input type="checkbox" id="autoAiEnabledToggle" checked onchange="onToggleAutoAi()" class="w-3.5 h-3.5 accent-indigo-600 rounded cursor-pointer">
-                    <span class="font-bold text-indigo-950">AI ประเมินอัตโนมัติเมื่อเอกสารครบ (2/2)</span>
-                </label>
+                <span id="aiModeStatusPill" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-semibold bg-amber-50 text-amber-900 border border-amber-300">
+                    AI ตรวจเฉพาะไฟล์จริงเท่านั้น (ไม่เดาคะแนน)
+                </span>
             </div>
 
             <div class="flex flex-wrap items-center gap-1.5 w-full lg:w-auto justify-between lg:justify-end">
@@ -181,8 +180,8 @@
                     </select>
                 </div>
 
-                <button onclick="runBatchAutoAiForCompleteTeachers()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition">
-                    ⚡ AI ประเมินทุกคนที่ครบ 2/2
+                <button onclick="runBatchVerifiedAiFromDrive()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition">
+                    ⚡ AI อ่านไฟล์จริงจาก Drive ทั้งโรงเรียน
                 </button>
                 <button onclick="syncGoogleSheets(true)" id="btnSyncSheets" class="px-2.5 py-1.5 rounded-lg bg-mwgreen-800 hover:bg-mwgreen-700 text-white font-semibold transition flex items-center gap-1">
                     <span id="syncIcon" class="inline-block">↻</span>
@@ -198,7 +197,7 @@
     <!-- Batch Auto-AI Progress Banner -->
     <div id="batchAiProgressBanner" class="hidden no-print bg-indigo-950 text-white border-b-2 border-gold-400">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 text-xs">
-            <span id="batchAiProgressText" class="font-semibold">กำลังประเมินด้วย Gemini AI อัตโนมัติ...</span>
+            <span id="batchAiProgressText" class="font-semibold">กำลังตรวจสอบไฟล์จริงใน Google Drive...</span>
             <div class="flex items-center gap-2 w-48 sm:w-64">
                 <div class="flex-1 bg-indigo-900 rounded-full h-2 overflow-hidden">
                     <div id="batchAiProgressBar" class="bg-gold-400 h-full transition-all duration-200" style="width: 0%"></div>
@@ -221,12 +220,12 @@
             <!-- 4 KPI Cards -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 border-t-4 border-t-mwgreen-800">
-                    <p class="text-xs font-medium text-slate-500">ครูผู้สอน / ส่งแผนฯ ครบ 2/2</p>
+                    <p class="text-xs font-medium text-slate-500">ครูผู้สอน / ส่งลิงก์ครบ 2/2</p>
                     <div class="flex items-baseline gap-2 mt-1">
                         <h3 id="kpi-plan-submitted" class="text-2xl sm:text-3xl font-extrabold text-mwgreen-950">0</h3>
                         <span id="kpi-total-teachers-sub" class="text-xs font-semibold text-slate-500">/ 0 คน</span>
                     </div>
-                    <p class="text-xs text-emerald-700 font-semibold mt-2" id="kpi-complete-docs">เอกสารครบถ้วน (2/2): 0 คน</p>
+                    <p class="text-xs text-emerald-700 font-semibold mt-2" id="kpi-complete-docs">ส่งลิงก์ครบ (2/2): 0 คน</p>
                 </div>
 
                 <div class="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 border-t-4 border-t-emerald-500">
@@ -236,9 +235,9 @@
                 </div>
 
                 <div class="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 border-t-4 border-t-indigo-500">
-                    <p class="text-xs font-medium text-slate-500">ค่าเฉลี่ยส่วนที่ 2: AI อัตโนมัติ</p>
+                    <p class="text-xs font-medium text-slate-500">ค่าเฉลี่ยส่วนที่ 2: AI (จากไฟล์จริง)</p>
                     <h3 id="kpi-ai-avg" class="text-2xl sm:text-3xl font-extrabold text-indigo-700 mt-1">0.0%</h3>
-                    <p class="text-xs text-indigo-600 font-medium mt-2">Gemini 3 Flash Auto-Evaluation</p>
+                    <p class="text-xs text-indigo-600 font-medium mt-2" id="kpi-ai-verified-count">AI ตรวจจากไฟล์จริงแล้ว: 0 คน</p>
                 </div>
 
                 <div class="bg-white rounded-2xl p-4 shadow-xs border border-slate-200 border-t-4 border-t-gold-500">
@@ -268,8 +267,8 @@
             <div class="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
                 <div class="p-4 sm:px-6 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <div>
-                        <h3 class="text-base font-bold text-mwgreen-950">สรุปผลการประเมินรวม (ค่าเฉลี่ยคณะกรรมการหลายคน + AI อัตโนมัติ)</h3>
-                        <p class="text-xs text-slate-500">คำนวณคะแนนสุทธิอัตโนมัติ พร้อมปุ่มเปิดใบรายงาน A4 ทันที</p>
+                        <h3 class="text-base font-bold text-mwgreen-950">สรุปผลการประเมินรวม (เฉพาะรายการที่มีผลประเมินจริงแล้ว)</h3>
+                        <p class="text-xs text-slate-500">แสดงคะแนนจากคณะกรรมการและ AI ที่ตรวจสอบเนื้อหาเอกสารจริงแล้วเท่านั้น</p>
                     </div>
                     <div class="flex gap-2">
                         <button onclick="exportEvaluationsCSV()" class="px-3 py-1.5 rounded-lg border border-mwgreen-300 bg-mwgreen-50 hover:bg-mwgreen-100 text-mwgreen-900 text-xs font-semibold">
@@ -286,7 +285,7 @@
                             <tr class="bg-mwgreen-900 text-white text-xs uppercase">
                                 <th class="py-3 px-4 font-semibold">ครูผู้สอน / กลุ่มสาระฯ</th>
                                 <th class="py-3 px-3 font-semibold text-center">ส่วนที่ 1: คณะกรรมการ</th>
-                                <th class="py-3 px-3 font-semibold text-center">ส่วนที่ 2: AI</th>
+                                <th class="py-3 px-3 font-semibold text-center">ส่วนที่ 2: AI (หลักฐานไฟล์)</th>
                                 <th class="py-3 px-3 font-semibold text-center">สุทธิรวม <span id="thWeightLabel" class="text-gold-300">(50:50)</span></th>
                                 <th class="py-3 px-3 font-semibold text-center">ระดับคุณภาพ</th>
                                 <th class="py-3 px-4 font-semibold text-center">จัดการ</th>
@@ -321,11 +320,11 @@
 
                     <select id="regStatusFilter" onchange="renderRegistryTable()" class="px-3.5 py-2 text-xs sm:text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-mwgreen-700">
                         <option value="ALL">สถานะทั้งหมด</option>
-                        <option value="COMPLETE_DOCS">เอกสารครบถ้วน (2/2: แผนฯ + บันทึกหลังแผน)</option>
+                        <option value="COMPLETE_DOCS">ส่งลิงก์ครบ (2/2: แผนฯ + บันทึกหลังแผน)</option>
                         <option value="PARTIAL_DOCS">ส่งบางส่วน (1/2)</option>
                         <option value="NO_DOCS">ยังไม่ส่ง (0/2)</option>
+                        <option value="EMPTY_DRIVE_FOLDER">โฟลเดอร์ว่าง / ไม่พบไฟล์ข้างใน</option>
                         <option value="EXCELLENT_90">ระดับดีเยี่ยม (90% ขึ้นไป)</option>
-                        <option value="HAS_BOTH_EVALS">ประเมินครบทั้งกรรมการ + AI แล้ว</option>
                     </select>
 
                     <div class="flex items-center justify-between bg-mwgreen-50 border border-mwgreen-200 rounded-xl px-4 py-2 text-xs">
@@ -342,9 +341,9 @@
                             <tr class="bg-mwgreen-900 text-white text-xs uppercase">
                                 <th class="py-3 px-3 font-semibold w-10 text-center">ที่</th>
                                 <th class="py-3 px-4 font-semibold">ชื่อ-นามสกุล ครูผู้สอน / กลุ่มสาระฯ</th>
-                                <th class="py-3 px-3 font-semibold text-center">เอกสาร Google Drive</th>
+                                <th class="py-3 px-3 font-semibold text-center">ลิงก์ Google Drive</th>
                                 <th class="py-3 px-3 font-semibold text-center">ส่วนที่ 1: กรรมการ</th>
-                                <th class="py-3 px-3 font-semibold text-center">ส่วนที่ 2: AI</th>
+                                <th class="py-3 px-3 font-semibold text-center">ส่วนที่ 2: AI (สถานะไฟล์จริง)</th>
                                 <th class="py-3 px-3 font-semibold text-center">สุทธิรวม</th>
                                 <th class="py-3 px-4 font-semibold text-center">ประเมิน / พิมพ์</th>
                             </tr>
@@ -364,7 +363,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div class="md:col-span-2">
                         <label class="block text-xs font-bold text-mwgreen-950 mb-1">1. เลือกครูผู้สอนที่ต้องการประเมิน *</label>
-                        <select id="activeTeacherSelect" onchange="onSelectActiveTeacher(true)" class="w-full px-3.5 py-2 text-sm border-2 border-mwgreen-500 rounded-xl bg-mwgreen-50/40 font-semibold text-mwgreen-950 focus:outline-none">
+                        <select id="activeTeacherSelect" onchange="onSelectActiveTeacher()" class="w-full px-3.5 py-2 text-sm border-2 border-mwgreen-500 rounded-xl bg-mwgreen-50/40 font-semibold text-mwgreen-950 focus:outline-none">
                             <option value="">-- เลือกครูผู้สอน --</option>
                         </select>
                     </div>
@@ -398,17 +397,17 @@
                 <!-- Drive Links Strip -->
                 <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-wrap justify-between items-center gap-2 text-xs">
                     <div class="flex items-center gap-2">
-                        <span class="font-semibold text-slate-700">เอกสารใน Google Drive:</span>
+                        <span class="font-semibold text-slate-700">ลิงก์ใน Google Sheets:</span>
                         <span id="activeDocCompletenessBadge" class="px-2.5 py-0.5 rounded-full font-bold bg-slate-200 text-slate-700">-</span>
                     </div>
                     <div class="flex flex-wrap items-center gap-2">
                         <a id="activePlanDriveBtn" href="#" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold hidden">
-                            เปิดไฟล์แผนการสอน
+                            เปิดลิงก์แผนการสอนใน Drive
                         </a>
                         <span id="activePlanMissingBadge" class="px-2.5 py-1 rounded bg-slate-200 text-slate-500">ไม่มีลิงก์แผนฯ</span>
 
                         <a id="activeRefDriveBtn" href="#" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold hidden">
-                            เปิดไฟล์บันทึกหลังแผน
+                            เปิดลิงก์บันทึกหลังแผนใน Drive
                         </a>
                         <span id="activeRefMissingBadge" class="px-2.5 py-1 rounded bg-slate-200 text-slate-500">ไม่มีลิงก์บันทึกฯ</span>
                     </div>
@@ -426,8 +425,8 @@
                 </div>
                 <div class="bg-mwgreen-950/60 rounded-xl p-3 border border-mwgreen-700">
                     <div class="flex justify-between text-xs text-mwgreen-200">
-                        <span>ส่วนที่ 2: AI อัตโนมัติ</span>
-                        <span id="bannerAiStatusBadge" class="text-indigo-300 font-bold">รอผล</span>
+                        <span>ส่วนที่ 2: AI (จากไฟล์จริง)</span>
+                        <span id="bannerAiStatusBadge" class="text-indigo-300 font-bold">รอตรวจไฟล์</span>
                     </div>
                     <div id="bannerPart2Score" class="text-2xl font-extrabold text-indigo-300 mt-0.5">-</div>
                 </div>
@@ -452,7 +451,7 @@
                     ส่วนที่ 1: คณะกรรมการประเมิน (เพิ่มผู้ประเมินหลายคนเพื่อหาค่าเฉลี่ย)
                 </button>
                 <button type="button" onclick="switchEvalPart('part2')" id="btnSubPart2" class="p-3.5 rounded-xl border-2 border-slate-200 bg-white text-mwgreen-950 font-bold text-xs sm:text-sm text-left transition">
-                    ส่วนที่ 2: AI ประเมินคุณภาพอัตโนมัติ (Gemini AI 20 ตัวชี้วัด)
+                    ส่วนที่ 2: AI ประเมินคุณภาพ (ตรวจสอบเนื้อหาไฟล์จริงเท่านั้น)
                 </button>
             </div>
 
@@ -547,44 +546,56 @@
                 </form>
             </div>
 
-            <!-- PART 2: GEMINI AI AUTOMATIC EVALUATION -->
+            <!-- PART 2: GEMINI AI REAL-CONTENT EVALUATION -->
             <div id="workspacePart2" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
                 <div class="lg:col-span-5 bg-white rounded-2xl p-5 shadow-xs border border-indigo-200 space-y-4">
-                    <h3 class="font-bold text-base text-mwgreen-950 border-b border-slate-200 pb-2">ส่วนที่ 2: AI ประเมินคุณภาพอัตโนมัติ (Gemini AI)</h3>
+                    <div class="border-b border-slate-200 pb-2">
+                        <h3 class="font-bold text-base text-mwgreen-950">ส่วนที่ 2: AI ประเมินคุณภาพจากเนื้อหาเอกสารจริง</h3>
+                        <p class="text-[11px] text-rose-700 font-semibold mt-0.5">* ระบบจะไม่ให้คะแนนหากโฟลเดอร์ใน Drive ว่างเปล่าหรือไม่มีเนื้อหาแผนการสอนจริง</p>
+                    </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <label for="aiPlanFileUpload" class="cursor-pointer border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/40 rounded-xl p-3 text-center">
-                            <span class="text-xs font-bold text-emerald-950 block">1. แนบไฟล์แผนการสอน</span>
-                            <span id="aiPlanFileNameBadge" class="text-[11px] text-slate-500">PDF / รูปภาพ / TXT</span>
-                            <input type="file" id="aiPlanFileUpload" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" onchange="handleAiUpload(event, 'plan')" class="hidden">
-                        </label>
-                        <label for="aiRefFileUpload" class="cursor-pointer border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 rounded-xl p-3 text-center">
-                            <span class="text-xs font-bold text-amber-950 block">2. แนบไฟล์บันทึกหลังแผน</span>
-                            <span id="aiRefFileNameBadge" class="text-[11px] text-slate-500">PDF / รูปภาพ / TXT</span>
-                            <input type="file" id="aiRefFileUpload" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" onchange="handleAiUpload(event, 'reflection')" class="hidden">
-                        </label>
+                    <!-- Option A: Fetch real files inside Google Drive Folder/File via Apps Script -->
+                    <div class="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 space-y-2">
+                        <span class="text-xs font-bold text-indigo-950 block">วิธีที่ 1: ดึงไฟล์จริงข้างในลิงก์ Google Drive ของครูอัตโนมัติ</span>
+                        <button type="button" onclick="fetchRealDriveDocsAndEvaluate()" class="w-full py-2 px-3 rounded-lg bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs shadow-xs">
+                            ตรวจสอบไฟล์ข้างใน Google Drive & ประเมินด้วย AI
+                        </button>
+                    </div>
+
+                    <!-- Option B: Direct Upload PDF / Images / Text -->
+                    <div class="space-y-2">
+                        <span class="text-xs font-bold text-slate-700 block">วิธีที่ 2: แนบไฟล์แผนการสอน / บันทึกหลังแผนโดยตรง</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <label for="aiPlanFileUpload" class="cursor-pointer border-2 border-dashed border-emerald-300 hover:border-emerald-500 bg-emerald-50/40 rounded-xl p-3 text-center">
+                                <span class="text-xs font-bold text-emerald-950 block">1. แนบไฟล์แผนการสอน</span>
+                                <span id="aiPlanFileNameBadge" class="text-[11px] text-slate-500">PDF / รูปภาพ / TXT</span>
+                                <input type="file" id="aiPlanFileUpload" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" onchange="handleAiUpload(event, 'plan')" class="hidden">
+                            </label>
+                            <label for="aiRefFileUpload" class="cursor-pointer border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/40 rounded-xl p-3 text-center">
+                                <span class="text-xs font-bold text-amber-950 block">2. แนบไฟล์บันทึกหลังแผน</span>
+                                <span id="aiRefFileNameBadge" class="text-[11px] text-slate-500">PDF / รูปภาพ / TXT</span>
+                                <input type="file" id="aiRefFileUpload" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" onchange="handleAiUpload(event, 'reflection')" class="hidden">
+                            </label>
+                        </div>
                     </div>
 
                     <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <label class="text-xs font-bold text-slate-700">เนื้อหาแผนการจัดการเรียนรู้ / บันทึกหลังแผน</label>
-                            <button type="button" onclick="fillSamplePlanTextForAI(true)" class="text-[11px] text-indigo-600 hover:underline font-medium">ใส่ตัวอย่าง + ประเมินทันที</button>
-                        </div>
-                        <textarea id="aiPlanTextContent" rows="6" placeholder="วางเนื้อหาแผนการสอนหรือบันทึกหลังแผนที่นี่ (หรือกดประเมินจากข้อมูลในระบบได้เลย)..." class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-xl"></textarea>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">หรือวางข้อความเนื้อหาแผนการจัดการเรียนรู้ / บันทึกหลังแผน (อย่างน้อย 120 ตัวอักษร):</label>
+                        <textarea id="aiPlanTextContent" rows="5" placeholder="วางเนื้อหาแผนการจัดการเรียนรู้และบันทึกหลังแผนจริงที่นี่..." class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-300 rounded-xl"></textarea>
                     </div>
 
-                    <button type="button" id="btnRunAiEval" onclick="runGeminiAiEvaluation(false)" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm shadow">
-                        สั่ง Gemini AI ประเมินคุณภาพแผนการสอน
+                    <button type="button" id="btnRunAiEval" onclick="runGeminiAiEvaluation()" class="w-full py-2.5 px-4 rounded-xl bg-mwgreen-900 hover:bg-mwgreen-800 text-gold-400 font-bold text-xs sm:text-sm shadow">
+                        เริ่มให้ Gemini AI วิเคราะห์เนื้อหาจริง (20 ตัวชี้วัด)
                     </button>
                 </div>
 
                 <div class="lg:col-span-7 bg-white rounded-2xl p-5 shadow-xs border border-slate-200 space-y-4">
                     <div class="flex justify-between items-center pb-2 border-b border-slate-200">
-                        <h3 class="font-bold text-base text-mwgreen-950">ผลการวิเคราะห์และให้คะแนนโดย AI</h3>
+                        <h3 class="font-bold text-base text-mwgreen-950">ผลการวิเคราะห์และหลักฐานที่ AI ตรวจสอบ</h3>
                         <span id="aiResultTimestamp" class="text-xs text-slate-400"></span>
                     </div>
                     <div id="aiLoadingState" class="hidden py-10 text-center text-sm font-bold text-indigo-900">
-                        กำลังวิเคราะห์แผนการจัดการเรียนรู้ทั้ง 5 ด้าน 20 ตัวชี้วัด...
+                        กำลังตรวจสอบไฟล์และวิเคราะห์เนื้อหาแผนการจัดการเรียนรู้จริง...
                     </div>
                     <div id="aiResultContainer"></div>
                 </div>
@@ -592,7 +603,7 @@
 
             <!-- Side-by-Side Comparison Table -->
             <div class="bg-white rounded-2xl p-5 shadow-xs border border-slate-200 overflow-x-auto">
-                <h3 class="text-sm sm:text-base font-bold text-mwgreen-950 mb-3">เปรียบเทียบคะแนนรายด้าน: ค่าเฉลี่ยคณะกรรมการ vs AI อัตโนมัติ</h3>
+                <h3 class="text-sm sm:text-base font-bold text-mwgreen-950 mb-3">เปรียบเทียบคะแนนรายด้าน: ค่าเฉลี่ยคณะกรรมการ vs AI</h3>
                 <table class="w-full text-left border-collapse text-xs sm:text-sm">
                     <thead>
                         <tr class="bg-mwgreen-900 text-white">
@@ -644,7 +655,7 @@
                 </div>
             </div>
 
-            <!-- Evaluator Roster Management (Inline) -->
+            <!-- Evaluator Roster Management -->
             <div class="bg-white rounded-2xl p-5 shadow-xs border border-slate-200 space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-200 pb-3">
                     <h3 class="text-base font-bold text-mwgreen-950">กำหนดรายชื่อคณะกรรมการผู้ประเมิน (สำหรับคำนวณค่าเฉลี่ยส่วนที่ 1)</h3>
@@ -699,26 +710,112 @@
                 </div>
             </div>
 
-            <!-- Lightweight API & GitHub Pages Settings -->
-            <div class="bg-white rounded-2xl p-5 shadow-xs border border-indigo-200 space-y-3">
-                <h3 class="text-base font-bold text-indigo-950">ตั้งค่า Gemini API Key และ Google Apps Script Webhook (สำหรับ GitHub Pages)</h3>
+            <!-- Real Google Drive Reader & Gemini API Settings -->
+            <div class="bg-white rounded-2xl p-5 shadow-xs border border-indigo-200 space-y-4">
+                <div>
+                    <h3 class="text-base font-bold text-indigo-950">ตั้งค่าการอ่านไฟล์จริงจาก Google Drive และ Gemini API Key</h3>
+                    <p class="text-xs text-slate-600 mt-0.5">
+                        เพื่อป้องกันไม่ให้ AI ให้คะแนนโฟลเดอร์ที่ว่างเปล่า ระบบจะใช้ <strong>Google Apps Script Web App</strong> เข้าไปตรวจไฟล์จริงใน Google Drive ของคุณครูและดึงเนื้อหามาให้ <strong>Gemini AI</strong> อ่านก่อนให้คะแนนเสมอ
+                    </p>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Gemini API Key (จาก aistudio.google.com/apikey):</label>
-                        <input type="password" id="customGeminiKeyInput" placeholder="AIzaSy... (หากเว้นว่าง ระบบจะใช้การประเมินมาตรฐานอัตโนมัติ)" class="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono">
+                        <label class="block font-bold text-slate-700 mb-1">1. Gemini API Key (จาก aistudio.google.com/apikey) *จำเป็นสำหรับ AI:</label>
+                        <input type="password" id="customGeminiKeyInput" placeholder="AIzaSy..." class="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono">
                     </div>
                     <div>
-                        <label class="block font-bold text-slate-700 mb-1">Google Apps Script Web App URL (บันทึกกลับ Sheets อัตโนมัติ):</label>
+                        <label class="block font-bold text-slate-700 mb-1">2. Google Apps Script Web App URL (ตัวอ่านไฟล์จริงใน Google Drive):</label>
                         <input type="url" id="appsScriptUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono">
                     </div>
                 </div>
-                <div class="flex flex-wrap gap-2 pt-1">
+                <div class="flex flex-wrap gap-2">
                     <button type="button" onclick="saveLightweightSettings()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs">
                         บันทึกการตั้งค่า
                     </button>
                     <button type="button" onclick="downloadIndexHtmlForGitHub()" class="px-4 py-2 rounded-xl bg-mwgreen-900 hover:bg-mwgreen-800 text-gold-400 font-bold text-xs">
-                        ดาวน์โหลดไฟล์ index.html พร้อมการตั้งค่าขึ้น GitHub Pages
+                        ดาวน์โหลดไฟล์ index.html ขึ้น GitHub Pages
                     </button>
+                    <button type="button" onclick="toggleAppsScriptCodeBox()" class="px-4 py-2 rounded-xl border border-indigo-300 bg-indigo-50 hover:bg-indigo-100 text-indigo-950 font-bold text-xs">
+                        ดูโค้ด Google Apps Script สำหรับอ่านไฟล์ใน Drive
+                    </button>
+                </div>
+
+                <!-- Copyable Google Apps Script Code for Real Drive Inspection -->
+                <div id="appsScriptCodeBox" class="hidden p-4 rounded-xl bg-slate-900 text-emerald-300 text-xs space-y-2">
+                    <div class="flex justify-between items-center text-white">
+                        <span class="font-bold">คัดลอกโค้ดนี้ไปวางใน script.google.com แล้ว Deploy เป็น Web App (Anyone):</span>
+                        <button type="button" onclick="copyAppsScriptCode()" class="px-2.5 py-1 rounded bg-gold-500 text-mwgreen-950 font-bold">คัดลอกโค้ด</button>
+                    </div>
+                    <pre id="appsScriptSourcePre" class="overflow-x-auto font-mono text-[11px] leading-relaxed select-all">function doGet(e) {
+  var planUrl = (e && e.parameter.planUrl) || "";
+  var refUrl = (e && e.parameter.refUrl) || "";
+  var planInfo = inspectDriveUrl(planUrl);
+  var refInfo = inspectDriveUrl(refUrl);
+  return ContentService.createTextOutput(JSON.stringify({
+    ok: true,
+    plan: planInfo,
+    reflection: refInfo
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+function inspectDriveUrl(url) {
+  if (!url) return { exists: false, fileCount: 0, files: [], text: "", reason: "ไม่มีลิงก์" };
+  var idMatch = url.match(/[-\w]{25,}/);
+  if (!idMatch) return { exists: false, fileCount: 0, files: [], text: "", reason: "ลิงก์ไม่ถูกต้อง" };
+  var id = idMatch[0];
+  try {
+    // Check if Folder
+    var folder = DriveApp.getFolderById(id);
+    var files = folder.getFiles();
+    var names = [], fullText = "";
+    while (files.hasNext()) {
+      var f = files.next();
+      names.push(f.getName());
+      fullText += extractFileText(f) + "\n";
+    }
+    return {
+      exists: names.length > 0,
+      isFolder: true,
+      fileCount: names.length,
+      files: names,
+      text: fullText.slice(0, 12000),
+      reason: names.length > 0 ? "พบไฟล์ในโฟลเดอร์ " + names.length + " ไฟล์" : "โฟลเดอร์ว่างเปล่า (ไม่มีไฟล์ข้างใน)"
+    };
+  } catch (errFolder) {
+    try {
+      // Check if Single File
+      var file = DriveApp.getFileById(id);
+      var txt = extractFileText(file);
+      return {
+        exists: true,
+        isFolder: false,
+        fileCount: 1,
+        files: [file.getName()],
+        text: txt.slice(0, 12000),
+        reason: "พบไฟล์ " + file.getName()
+      };
+    } catch (errFile) {
+      return { exists: false, fileCount: 0, files: [], text: "", reason: "ไม่สามารถเข้าถึงไฟล์ได้ (ยังไม่เปิดสิทธิ์แชร์ หรือไฟล์ถูกลบ)" };
+    }
+  }
+}
+
+function extractFileText(file) {
+  var mime = file.getMimeType();
+  try {
+    if (mime === MimeType.GOOGLE_DOCS) {
+      return DocumentApp.openById(file.getId()).getBody().getText();
+    } else if (mime === MimeType.PLAIN_TEXT) {
+      return file.getBlob().getDataAsString();
+    } else if (mime === MimeType.PDF || mime.indexOf("word") !== -1) {
+      // Convert PDF/DOCX temporarily via Drive API if enabled, or return filename metadata
+      return "[ไฟล์เอกสาร: " + file.getName() + " (" + mime + ")]";
+    }
+    return "[ไฟล์: " + file.getName() + "]";
+  } catch (e) {
+    return "[ไฟล์: " + file.getName() + "]";
+  }
+}</pre>
                 </div>
             </div>
 
@@ -770,13 +867,13 @@
         const URL_CSV_REFLECTIONS = `https://docs.google.com/spreadsheets/d/${SHEET_REFLECTION_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent("ส่งบันทึกหลังแผน")}`;
 
         const STORAGE_KEYS = {
-            MASTER: "mw_lite_master_teachers",
-            ROSTER: "mw_lite_evaluator_roster",
-            COMMITTEE: "mw_lite_committee_evals",
-            AI: "mw_lite_ai_evals",
-            META: "mw_lite_teacher_meta",
-            WEIGHT: "mw_lite_weight_ratio",
-            AUTO_AI: "mw_lite_auto_ai",
+            MASTER: "mw_strict_master_teachers",
+            ROSTER: "mw_strict_evaluator_roster",
+            COMMITTEE: "mw_strict_committee_evals",
+            AI: "mw_strict_ai_evals",
+            DRIVE_AUDIT: "mw_strict_drive_audit",
+            META: "mw_strict_teacher_meta",
+            WEIGHT: "mw_strict_weight_ratio",
             GEMINI_KEY: "mw_lite_gemini_key",
             SCRIPT_URL: "mw_lite_apps_script_url"
         };
@@ -950,22 +1047,8 @@
             }
         ];
 
-        const DEFAULT_AI_EVALS = {
-            "นางกานต์ธีรา ปัญจะทองคำ": {
-                evaluatedAt: "2026-11-12 14:20", modelName: "Gemini 3 Flash",
-                scores: { q1_1:5,q1_2:5,q1_3:5,q1_4:5, q2_1:5,q2_2:5,q2_3:5,q2_4:4,q2_5:4, q3_1:5,q3_2:5,q3_3:4, q4_1:5,q4_2:5,q4_3:5,q4_4:4, q5_1:5,q5_2:5,q5_3:5,q5_4:5 },
-                totalScore: 96,
-                domainAnalysis: [
-                    "ด้านที่ 1 (20/20): ระบุมาตรฐาน ว 1.2 และตัวชี้วัดครบถ้วน จุดประสงค์ K-P-A สอดคล้องกันดีเยี่ยม",
-                    "ด้านที่ 2 (24/25): ออกแบบขั้นสอนแบบสืบเสาะหาความรู้ 5E เน้นให้ผู้เรียนลงมือทดลองและอภิปรายกลุ่ม",
-                    "ด้านที่ 3 (14/15): ใช้สื่อจำลอง 3 มิติ ใบความรู้ และแบบจำลองระบบร่างกายที่กระตุ้นความสนใจได้ดี",
-                    "ด้านที่ 4 (19/20): มีเกณฑ์ Rubric ประเมินทักษะปฏิบัติการทดลองและแบบทดสอบก่อน-หลังเรียนครบถ้วน",
-                    "ด้านที่ 5 (20/20): บันทึกหลังแผนแสดงร้อยละผู้ผ่านเกณฑ์ชัดเจน พร้อมแผนซ่อมเสริมรายบุคคล"
-                ],
-                strengths: "ความเชื่อมโยงระหว่างจุดประสงค์การเรียนรู้ กิจกรรม 5E และเกณฑ์ Rubric มีความสอดคล้องสูงมาก",
-                suggestions: "ควรเพิ่มเติมคำถามกระตุ้นการคิดขั้นสูงในขั้นขยายความรู้"
-            }
-        };
+        // Only real verified evaluations are stored (no pre-filled fake AI scores)
+        const DEFAULT_AI_EVALS = {};
 
         // =========================================================================
         // 4. APPLICATION STATE
@@ -974,9 +1057,9 @@
         let evaluatorRoster = [];
         let committeeEvaluations = [];
         let aiEvaluations = {};
+        let driveAuditMap = {}; // Stores real Drive folder/file inspection results
         let teacherMetaMap = {};
         let weightRatio = "50:50";
-        let autoAiEnabled = true;
         let activeTeacherName = "";
         let uploadedPlanFile = null;
         let uploadedRefFile = null;
@@ -1076,6 +1159,9 @@
                 const a = localStorage.getItem(STORAGE_KEYS.AI);
                 aiEvaluations = a ? JSON.parse(a) : JSON.parse(JSON.stringify(DEFAULT_AI_EVALS));
 
+                const da = localStorage.getItem(STORAGE_KEYS.DRIVE_AUDIT);
+                driveAuditMap = da ? JSON.parse(da) : {};
+
                 const meta = localStorage.getItem(STORAGE_KEYS.META);
                 teacherMetaMap = meta ? JSON.parse(meta) : {
                     "นางกานต์ธีรา ปัญจะทองคำ": { subjectName: "ว22101 วิทยาศาสตร์พื้นฐาน (ม.2)", unitTopic: "หน่วยการเรียนรู้ที่ 3 ระบบร่างกายมนุษย์ (Active Learning 5E)", semesterNum: "2", academicYear: "2569" }
@@ -1083,10 +1169,6 @@
 
                 const w = localStorage.getItem(STORAGE_KEYS.WEIGHT);
                 if (w) { weightRatio = w; document.getElementById("weightRatioSelect").value = w; }
-
-                const autoAi = localStorage.getItem(STORAGE_KEYS.AUTO_AI);
-                autoAiEnabled = autoAi !== null ? autoAi === "true" : true;
-                document.getElementById("autoAiEnabledToggle").checked = autoAiEnabled;
 
                 const gk = localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || EMBEDDED_CUSTOM_GEMINI_KEY;
                 if (gk && document.getElementById("customGeminiKeyInput")) document.getElementById("customGeminiKeyInput").value = gk;
@@ -1103,9 +1185,9 @@
             localStorage.setItem(STORAGE_KEYS.ROSTER, JSON.stringify(evaluatorRoster));
             localStorage.setItem(STORAGE_KEYS.COMMITTEE, JSON.stringify(committeeEvaluations));
             localStorage.setItem(STORAGE_KEYS.AI, JSON.stringify(aiEvaluations));
+            localStorage.setItem(STORAGE_KEYS.DRIVE_AUDIT, JSON.stringify(driveAuditMap));
             localStorage.setItem(STORAGE_KEYS.META, JSON.stringify(teacherMetaMap));
             localStorage.setItem(STORAGE_KEYS.WEIGHT, weightRatio);
-            localStorage.setItem(STORAGE_KEYS.AUTO_AI, String(autoAiEnabled));
         }
 
         function saveLightweightSettings() {
@@ -1118,6 +1200,16 @@
             else localStorage.removeItem(STORAGE_KEYS.SCRIPT_URL);
 
             showToast("บันทึกการตั้งค่าเรียบร้อยแล้ว", "success");
+        }
+
+        function toggleAppsScriptCodeBox() {
+            document.getElementById("appsScriptCodeBox").classList.toggle("hidden");
+        }
+
+        function copyAppsScriptCode() {
+            const code = document.getElementById("appsScriptSourcePre").textContent;
+            navigator.clipboard.writeText(code);
+            showToast("คัดลอกโค้ด Google Apps Script เรียบร้อยแล้ว", "success");
         }
 
         // =========================================================================
@@ -1196,7 +1288,7 @@
         }
 
         // =========================================================================
-        // 7. COMPOSITE SCORING (MULTI-EVALUATOR COMMITTEE + AI)
+        // 7. COMPOSITE SCORING (MULTI-EVALUATOR COMMITTEE + VERIFIED AI)
         // =========================================================================
         function getWeights() {
             const [w1, w2] = weightRatio.split(":").map(Number);
@@ -1207,11 +1299,6 @@
             weightRatio = document.getElementById("weightRatioSelect").value;
             saveState();
             renderAllViews();
-        }
-
-        function onToggleAutoAi() {
-            autoAiEnabled = document.getElementById("autoAiEnabledToggle").checked;
-            saveState();
         }
 
         function classifyQuality(pct) {
@@ -1239,7 +1326,7 @@
 
             let part2Score = null;
             let part2DomainScores = [null, null, null, null, null];
-            if (aiObj) {
+            if (aiObj && aiObj.verifiedFromRealContent) {
                 part2Score = parseFloat(aiObj.totalScore.toFixed(2));
                 part2DomainScores = RUBRIC_DOMAINS.map(d => d.items.reduce((s, it) => s + (aiObj.scores[it.id] || 0), 0));
             }
@@ -1317,17 +1404,18 @@
 
             document.getElementById("kpi-plan-submitted").textContent = planCount;
             document.getElementById("kpi-total-teachers-sub").textContent = `/ ${total} คน`;
-            document.getElementById("kpi-complete-docs").textContent = `เอกสารครบถ้วน (2/2): ${completeCount} คน`;
+            document.getElementById("kpi-complete-docs").textContent = `ส่งลิงก์ครบ (2/2): ${completeCount} คน`;
             document.getElementById("kpi-committee-avg").textContent = p1List.length ? `${(p1List.reduce((s, c) => s + c.part1Avg, 0) / p1List.length).toFixed(1)}%` : "0.0%";
             document.getElementById("kpi-evaluator-count").textContent = `คณะกรรมการในระบบ: ${evaluatorRoster.length} ท่าน`;
             document.getElementById("kpi-ai-avg").textContent = p2List.length ? `${(p2List.reduce((s, c) => s + c.part2Score, 0) / p2List.length).toFixed(1)}%` : "0.0%";
+            document.getElementById("kpi-ai-verified-count").textContent = `AI ตรวจจากไฟล์จริงแล้ว: ${p2List.length} คน`;
             document.getElementById("kpi-composite-avg").textContent = allComps.length ? `${(allComps.reduce((s, c) => s + c.compositeScore, 0) / allComps.length).toFixed(1)}%` : "0.0%";
             document.getElementById("kpi-evaluated-plans").textContent = `ประเมินแล้ว: ${allComps.length} รายการ`;
             document.getElementById("thWeightLabel").textContent = `(${weightRatio})`;
 
             const tbody = document.getElementById("dashboardConsolidatedBody");
             if (!allComps.length) {
-                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500">ยังไม่มีรายการประเมิน</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500">ยังไม่มีรายการประเมินที่ตรวจสอบไฟล์จริงแล้ว</td></tr>`;
             } else {
                 tbody.innerHTML = allComps.map(c => {
                     const tObj = masterTeachers.find(t => t.teacherName === c.teacherName) || { department: "-" };
@@ -1342,7 +1430,7 @@
                                 ${c.part1Avg !== null ? `<span class="font-bold text-emerald-700">${c.part1Avg.toFixed(1)}%</span> <span class="text-[11px] text-slate-500">(${c.evaluatorCount} ท่าน)</span>` : `<span class="text-xs text-slate-400">-</span>`}
                             </td>
                             <td class="py-3 px-3 text-center">
-                                ${c.part2Score !== null ? `<span class="font-bold text-indigo-700">${c.part2Score.toFixed(1)}%</span>` : `<span class="text-xs text-slate-400">-</span>`}
+                                ${c.part2Score !== null ? `<div class="font-bold text-indigo-700">${c.part2Score.toFixed(1)}%</div><span class="text-[10px] text-emerald-700">✓ ${c.aiObj.sourceEvidence || 'ตรวจไฟล์จริง'}</span>` : `<span class="text-xs text-slate-400">-</span>`}
                             </td>
                             <td class="py-3 px-3 text-center bg-gold-50/40 font-extrabold text-mwgreen-950">${c.compositeScore.toFixed(1)}%</td>
                             <td class="py-3 px-3 text-center"><span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${c.quality.badgeClass}">${c.quality.label}</span></td>
@@ -1377,7 +1465,7 @@
                         labels,
                         datasets: [
                             { label: 'คณะกรรมการ (%)', data: depts.map(d => avgBy(d, 'part1Avg')), backgroundColor: '#059669', borderRadius: 4 },
-                            { label: 'AI อัตโนมัติ (%)', data: depts.map(d => avgBy(d, 'part2Score')), backgroundColor: '#4f46e5', borderRadius: 4 },
+                            { label: 'AI (ไฟล์จริง %)', data: depts.map(d => avgBy(d, 'part2Score')), backgroundColor: '#4f46e5', borderRadius: 4 },
                             { label: 'สุทธิรวม (%)', data: depts.map(d => avgBy(d, 'compositeScore')), type: 'line', borderColor: '#d4af37', backgroundColor: '#fbbf24', borderWidth: 2.5 }
                         ]
                     },
@@ -1418,12 +1506,13 @@
                 if (q && !t.teacherName.toLowerCase().includes(q) && !t.department.toLowerCase().includes(q)) return false;
                 if (dept !== "ALL" && t.department !== dept) return false;
                 const comp = calculateTeacherComposite(t.teacherName);
+                const audit = driveAuditMap[normalizeNameKey(t.teacherName)];
                 const isComp = t.hasPlan && t.hasReflection;
                 if (st === "COMPLETE_DOCS") return isComp;
                 if (st === "PARTIAL_DOCS") return (t.hasPlan || t.hasReflection) && !isComp;
                 if (st === "NO_DOCS") return !t.hasPlan && !t.hasReflection;
+                if (st === "EMPTY_DRIVE_FOLDER") return audit && audit.isEmptyOrUnreadable;
                 if (st === "EXCELLENT_90") return comp.compositeScore !== null && comp.compositeScore >= 90;
-                if (st === "HAS_BOTH_EVALS") return comp.part1Avg !== null && comp.part2Score !== null;
                 return true;
             });
 
@@ -1431,8 +1520,17 @@
             const tbody = document.getElementById("registryTableBody");
             tbody.innerHTML = filtered.map((t, i) => {
                 const comp = calculateTeacherComposite(t.teacherName);
+                const audit = driveAuditMap[normalizeNameKey(t.teacherName)];
                 const isComplete = t.hasPlan && t.hasReflection;
                 const safeName = t.teacherName.replace(/'/g, "\\'");
+
+                let aiStatusCell = `<span class="text-xs text-slate-400">รอตรวจไฟล์จริง</span>`;
+                if (comp.part2Score !== null) {
+                    aiStatusCell = `<div class="font-bold text-indigo-700">${comp.part2Score.toFixed(1)}%</div><span class="text-[10px] text-emerald-700">✓ อ่านไฟล์จริงแล้ว</span>`;
+                } else if (audit && audit.isEmptyOrUnreadable) {
+                    aiStatusCell = `<span class="inline-block px-2 py-0.5 rounded bg-rose-100 text-rose-800 border border-rose-300 text-[11px] font-bold">⚠ ${audit.statusLabel}</span>`;
+                }
+
                 return `
                     <tr class="hover:bg-mwgreen-50/40">
                         <td class="py-3 px-3 text-center text-xs text-slate-500">${i + 1}</td>
@@ -1443,7 +1541,7 @@
                         <td class="py-3 px-3 text-center">
                             <div class="mb-1">
                                 <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${isComplete ? 'bg-emerald-100 text-emerald-900' : (t.hasPlan || t.hasReflection ? 'bg-amber-100 text-amber-900' : 'bg-slate-100 text-slate-500')}">
-                                    ${isComplete ? '✓ ครบ 2/2' : (t.hasPlan || t.hasReflection ? 'ส่ง 1/2' : 'ยังไม่ส่ง 0/2')}
+                                    ${isComplete ? 'ส่งลิงก์ 2/2' : (t.hasPlan || t.hasReflection ? 'ส่งลิงก์ 1/2' : 'ยังไม่ส่ง 0/2')}
                                 </span>
                             </div>
                             <div class="flex justify-center gap-1">
@@ -1454,16 +1552,14 @@
                         <td class="py-3 px-3 text-center">
                             ${comp.part1Avg !== null ? `<span class="font-bold text-emerald-700">${comp.part1Avg.toFixed(1)}%</span> <span class="text-[11px] text-slate-500">(${comp.evaluatorCount})</span>` : '-'}
                         </td>
-                        <td class="py-3 px-3 text-center">
-                            ${comp.part2Score !== null ? `<span class="font-bold text-indigo-700">${comp.part2Score.toFixed(1)}%</span>` : '-'}
-                        </td>
+                        <td class="py-3 px-3 text-center">${aiStatusCell}</td>
                         <td class="py-3 px-3 text-center">
                             ${comp.compositeScore !== null ? `<div class="font-extrabold text-mwgreen-950">${comp.compositeScore.toFixed(1)}%</div><span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${comp.quality.badgeClass}">${comp.quality.label}</span>` : '<span class="text-xs text-slate-400">รอประเมิน</span>'}
                         </td>
                         <td class="py-3 px-4 text-center">
                             <div class="flex justify-center gap-1">
                                 <button onclick="openTeacherWorkspace('${safeName}', 'part1')" class="px-2.5 py-1 rounded-lg bg-mwgreen-900 text-gold-400 text-xs font-semibold">+ กรรมการ</button>
-                                <button onclick="openTeacherWorkspace('${safeName}', 'part2')" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-xs font-semibold">AI</button>
+                                <button onclick="openTeacherWorkspace('${safeName}', 'part2')" class="px-2.5 py-1 rounded-lg bg-indigo-600 text-white text-xs font-semibold">ตรวจ AI</button>
                                 ${comp.compositeScore !== null ? `<button onclick="openPrintReportForTeacher('${safeName}')" class="px-2 py-1 rounded-lg border border-mwgreen-300 bg-mwgreen-50 text-mwgreen-900 text-xs font-semibold">A4</button>` : ''}
                             </div>
                         </td>
@@ -1473,13 +1569,13 @@
         }
 
         // =========================================================================
-        // 9. ASSESSMENT WORKSPACE (PART 1 COMMITTEE + PART 2 AI)
+        // 9. ASSESSMENT WORKSPACE (PART 1 COMMITTEE + PART 2 STRICT AI)
         // =========================================================================
         function populateTeacherDropdown() {
             const sel = document.getElementById("activeTeacherSelect");
             const sorted = [...masterTeachers].sort((a, b) => a.department.localeCompare(b.department, 'th') || a.teacherName.localeCompare(b.teacherName, 'th'));
             sel.innerHTML = sorted.map(t => {
-                const tag = (t.hasPlan && t.hasReflection) ? "✓ ครบ 2/2" : (t.hasPlan || t.hasReflection ? "ส่ง 1/2" : "0/2");
+                const tag = (t.hasPlan && t.hasReflection) ? "ส่งลิงก์ 2/2" : (t.hasPlan || t.hasReflection ? "ส่งลิงก์ 1/2" : "0/2");
                 return `<option value="${t.teacherName}">${t.teacherName} (${t.department}) [${tag}]</option>`;
             }).join('');
 
@@ -1488,7 +1584,7 @@
             }
             if (activeTeacherName) {
                 sel.value = activeTeacherName;
-                onSelectActiveTeacher(false);
+                onSelectActiveTeacher();
             }
         }
 
@@ -1497,7 +1593,7 @@
             document.getElementById("activeTeacherSelect").value = teacherName;
             switchTab("form");
             switchEvalPart(part);
-            onSelectActiveTeacher(true);
+            onSelectActiveTeacher();
         }
 
         function switchEvalPart(part) {
@@ -1516,7 +1612,7 @@
             }
         }
 
-        function onSelectActiveTeacher(allowAutoAi = true) {
+        function onSelectActiveTeacher() {
             activeTeacherName = document.getElementById("activeTeacherSelect").value;
             const t = masterTeachers.find(item => item.teacherName === activeTeacherName);
             if (!t) return;
@@ -1534,7 +1630,7 @@
 
             const isComplete = t.hasPlan && t.hasReflection;
             const badge = document.getElementById("activeDocCompletenessBadge");
-            badge.textContent = isComplete ? "✓ เอกสารครบถ้วน (2/2)" : (t.hasPlan || t.hasReflection ? "ส่งบางส่วน (1/2)" : "ยังไม่ส่ง (0/2)");
+            badge.textContent = isComplete ? "ส่งลิงก์ในชีตครบ 2/2" : (t.hasPlan || t.hasReflection ? "ส่งลิงก์บางส่วน 1/2" : "ยังไม่ส่งลิงก์ 0/2");
             badge.className = `px-2.5 py-0.5 rounded-full font-bold ${isComplete ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900'}`;
 
             const btnPlan = document.getElementById("activePlanDriveBtn");
@@ -1553,18 +1649,13 @@
             renderCommitteeEvaluatorsForActiveTeacher();
             renderAiEvaluationResultForActiveTeacher();
             renderSideBySideDomainTable();
-
-            if (allowAutoAi && autoAiEnabled && isComplete && !aiEvaluations[normalizeNameKey(activeTeacherName)]) {
-                showToast(`ตรวจพบเอกสารครบ 2/2 ของ ${activeTeacherName} — AI กำลังประเมินอัตโนมัติทันที`, "info");
-                runGeminiAiEvaluation(true);
-            }
         }
 
         function updateActiveTeacherSummaryBanner() {
             const comp = calculateTeacherComposite(activeTeacherName);
             document.getElementById("bannerEvalCountBadge").textContent = `${comp.evaluatorCount} ท่าน`;
             document.getElementById("bannerPart1Score").textContent = comp.part1Avg !== null ? `${comp.part1Avg.toFixed(1)}%` : "-";
-            document.getElementById("bannerAiStatusBadge").textContent = comp.part2Score !== null ? "ประเมินแล้ว" : "รอผล";
+            document.getElementById("bannerAiStatusBadge").textContent = comp.part2Score !== null ? "ตรวจไฟล์จริงแล้ว" : "รอตรวจไฟล์จริง";
             document.getElementById("bannerPart2Score").textContent = comp.part2Score !== null ? `${comp.part2Score.toFixed(1)}%` : "-";
             document.getElementById("bannerWeightBadge").textContent = weightRatio;
             document.getElementById("bannerCompositeScore").textContent = comp.compositeScore !== null ? `${comp.compositeScore.toFixed(1)}%` : "-";
@@ -1725,7 +1816,6 @@
             else committeeEvaluations.push(rec);
 
             saveState();
-            pushTeacherResultToWebhook(activeTeacherName);
             resetCommitteeForm();
             renderAllViews();
             showToast(`บันทึกคะแนนของ ${evObj.name} เรียบร้อยแล้ว!`, "success");
@@ -1764,7 +1854,7 @@
         }
 
         // =========================================================================
-        // 11. PART 2: GEMINI AI EVALUATION
+        // 11. PART 2: STRICT REAL-CONTENT GEMINI AI EVALUATION (NO GUESSING)
         // =========================================================================
         async function handleAiUpload(event, type) {
             const file = event.target.files?.[0];
@@ -1775,7 +1865,7 @@
             if (file.type === "text/plain") {
                 const txt = await file.text();
                 const box = document.getElementById("aiPlanTextContent");
-                box.value = (box.value + `\n--- ${file.name} ---\n` + txt.slice(0, 12000)).trim();
+                box.value = (box.value + `\n--- ${file.name} ---\n` + txt.slice(0, 14000)).trim();
             } else {
                 const base64Data = await new Promise((res, rej) => {
                     const r = new FileReader();
@@ -1783,171 +1873,269 @@
                     r.onerror = rej;
                     r.readAsDataURL(file);
                 });
-                const payload = { mimeType: file.type || "application/pdf", base64Data };
+                const payload = { mimeType: file.type || "application/pdf", base64Data, fileName: file.name };
                 if (type === "plan") uploadedPlanFile = payload;
                 else uploadedRefFile = payload;
             }
-
-            if (autoAiEnabled && uploadedPlanFile && uploadedRefFile) {
-                runGeminiAiEvaluation(true);
-            }
+            showToast(`แนบไฟล์จริง "${file.name}" เรียบร้อยแล้ว`, "success");
         }
 
-        function fillSamplePlanTextForAI(runNow = false) {
-            const t = masterTeachers.find(x => x.teacherName === activeTeacherName) || { department: "วิทยาศาสตร์และเทคโนโลยี" };
-            document.getElementById("aiPlanTextContent").value =
-`แผนการจัดการเรียนรู้ โรงเรียนมวกเหล็กวิทยา กลุ่มสาระการเรียนรู้${t.department}
-1. วิเคราะห์มาตรฐานการเรียนรู้และตัวชี้วัดครบถ้วน จุดประสงค์ครอบคลุม K-P-A
-2. กิจกรรมการเรียนรู้เชิงรุก Active Learning แบ่งเป็นขั้นนำ ขั้นจัดกิจกรรมลงมือปฏิบัติจริง และขั้นสรุป
-3. ใช้สื่อดิจิทัล ใบความรู้ ใบงาน และแหล่งเรียนรู้ในท้องถิ่นอำเภอมวกเหล็ก
-4. วัดและประเมินผลตามสภาพจริงด้วยแบบทดสอบและเกณฑ์ Rubric
-5. บันทึกหลังแผนแสดงร้อยละผู้ผ่านเกณฑ์ ปัญหาอุปสรรค และแนวทางซ่อมเสริมรายบุคคลชัดเจน`;
-            if (runNow) runGeminiAiEvaluation(true);
-        }
-
-        async function executeAiForTeacher(teacherName, planText = "", planFile = null, refFile = null) {
-            const t = masterTeachers.find(x => normalizeNameKey(x.teacherName) === normalizeNameKey(teacherName)) || {};
-            const apiKey = (localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || EMBEDDED_CUSTOM_GEMINI_KEY || "").trim();
-            let parsed = null;
-
-            if (apiKey) {
-                const parts = [{
-                    text: `ประเมินคุณภาพแผนการจัดการเรียนรู้และบันทึกหลังแผนของครู ${teacherName} (กลุ่มสาระฯ ${t.department || "-"}) ตามเกณฑ์ 5 ด้าน 20 ตัวชี้วัด (ให้คะแนนข้อละ 1-5) เนื้อหา:\n${planText || "ประเมินตามเกณฑ์มาตรฐานหลักสูตรสถานศึกษาโรงเรียนมวกเหล็กวิทยา"}`
-                }];
-                if (planFile) parts.push({ inlineData: planFile });
-                if (refFile) parts.push({ inlineData: refFile });
-
-                try {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            contents: [{ role: "user", parts }],
-                            generationConfig: {
-                                responseMimeType: "application/json",
-                                responseSchema: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        scores: {
-                                            type: "OBJECT",
-                                            properties: {
-                                                q1_1:{type:"INTEGER"},q1_2:{type:"INTEGER"},q1_3:{type:"INTEGER"},q1_4:{type:"INTEGER"},
-                                                q2_1:{type:"INTEGER"},q2_2:{type:"INTEGER"},q2_3:{type:"INTEGER"},q2_4:{type:"INTEGER"},q2_5:{type:"INTEGER"},
-                                                q3_1:{type:"INTEGER"},q3_2:{type:"INTEGER"},q3_3:{type:"INTEGER"},
-                                                q4_1:{type:"INTEGER"},q4_2:{type:"INTEGER"},q4_3:{type:"INTEGER"},q4_4:{type:"INTEGER"},
-                                                q5_1:{type:"INTEGER"},q5_2:{type:"INTEGER"},q5_3:{type:"INTEGER"},q5_4:{type:"INTEGER"}
-                                            }
-                                        },
-                                        domainAnalysis: { type: "ARRAY", items: { type: "STRING" } },
-                                        strengths: { type: "STRING" },
-                                        suggestions: { type: "STRING" }
-                                    }
-                                }
-                            }
-                        })
-                    });
-                    if (res.ok) {
-                        const data = await res.json();
-                        const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (txt) parsed = JSON.parse(txt);
-                    }
-                } catch (e) {}
-            }
-
-            if (!parsed) {
-                const h = teacherName.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 3;
-                const s = v => Math.min(5, Math.max(1, v));
-                parsed = {
-                    scores: {
-                        q1_1: 5, q1_2: s(4 + (h === 0 ? 1 : 0)), q1_3: 4, q1_4: 5,
-                        q2_1: s(4 + (h !== 2 ? 1 : 0)), q2_2: 5, q2_3: 4, q2_4: 4, q2_5: s(4 + (h === 1 ? 1 : 0)),
-                        q3_1: 4, q3_2: 4, q3_3: s(4 + (h === 0 ? 1 : 0)),
-                        q4_1: 5, q4_2: 4, q4_3: 4, q4_4: s(4 + (h !== 2 ? 1 : 0)),
-                        q5_1: t.hasReflection ? 5 : 4, q5_2: t.hasReflection ? 5 : 4, q5_3: s(4 + (h === 1 ? 1 : 0)), q5_4: 4
-                    },
-                    domainAnalysis: [
-                        `ด้านที่ 1: โครงสร้างแผนของ ${teacherName} ครบถ้วนตามรูปแบบโรงเรียนมวกเหล็กวิทยา`,
-                        `ด้านที่ 2: ออกแบบกิจกรรมการเรียนรู้เชิงรุก Active Learning เป็นลำดับขั้นตอนชัดเจน`,
-                        `ด้านที่ 3: เลือกใช้สื่อและใบกิจกรรมเหมาะสมกับกลุ่มสาระฯ ${t.department || ""}`,
-                        `ด้านที่ 4: การวัดและประเมินผลครอบคลุมทั้งด้านความรู้ ทักษะ และคุณลักษณะ (K-P-A)`,
-                        `ด้านที่ 5: ${t.hasReflection ? "มีบันทึกหลังแผนครบถ้วนและระบุแนวทางพัฒนาผู้เรียนชัดเจน" : "แนะนำให้แนบสรุปผลสัมฤทธิ์ในบันทึกหลังแผนเพิ่มเติม"}`
-                    ],
-                    strengths: `แผนการจัดการเรียนรู้ของ ${teacherName} มีความสอดคล้องระหว่างจุดประสงค์ กิจกรรม และการวัดผลอย่างเป็นระบบ`,
-                    suggestions: "ควรเพิ่มเติมเกณฑ์การประเมินสมรรถนะรายบุคคลและคำถามกระตุ้นการคิดขั้นสูง"
+        async function inspectRealDriveLinkViaScript(teacherObj) {
+            const scriptUrl = (localStorage.getItem(STORAGE_KEYS.SCRIPT_URL) || EMBEDDED_APPS_SCRIPT_URL || "").trim();
+            if (!scriptUrl) {
+                return {
+                    configured: false,
+                    ok: false,
+                    message: "ยังไม่ได้ตั้งค่า Google Apps Script URL สำหรับเปิดอ่านไฟล์ข้างในลิงก์ Google Drive"
                 };
             }
 
-            const cleanScores = {};
-            let totalScore = 0;
-            RUBRIC_DOMAINS.forEach(d => d.items.forEach(it => {
-                const v = Math.min(5, Math.max(1, Number(parsed.scores?.[it.id]) || 4));
-                cleanScores[it.id] = v;
-                totalScore += v;
-            }));
-
-            const rec = {
-                evaluatedAt: new Date().toLocaleString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
-                modelName: apiKey ? "Gemini 3 Flash API" : "Gemini AI Standard Rubric",
-                scores: cleanScores,
-                totalScore,
-                domainAnalysis: parsed.domainAnalysis || [],
-                strengths: parsed.strengths || "",
-                suggestions: parsed.suggestions || ""
-            };
-
-            aiEvaluations[normalizeNameKey(teacherName)] = rec;
-            saveState();
-            return rec;
+            try {
+                const query = `${scriptUrl}?planUrl=${encodeURIComponent(teacherObj.planLink || "")}&refUrl=${encodeURIComponent(teacherObj.reflectionLink || "")}`;
+                const res = await fetch(query);
+                if (!res.ok) throw new Error("Apps Script HTTP error");
+                const data = await res.json();
+                return { configured: true, ok: true, data };
+            } catch (e) {
+                return { configured: true, ok: false, message: "ไม่สามารถเชื่อมต่อ Google Apps Script ได้ กรุณาตรวจสอบสิทธิ์ Deploy (Anyone)" };
+            }
         }
 
-        async function runGeminiAiEvaluation(isAuto = false) {
-            if (!activeTeacherName || isAutoAiRunning) return;
-            isAutoAiRunning = true;
+        async function fetchRealDriveDocsAndEvaluate() {
+            if (!activeTeacherName) return;
+            const t = masterTeachers.find(x => x.teacherName === activeTeacherName);
+            if (!t || (!t.planLink && !t.reflectionLink)) {
+                showToast("ครูท่านนี้ยังไม่ได้ส่งลิงก์ Google Drive ในชีต", "error");
+                return;
+            }
+
+            const check = await inspectRealDriveLinkViaScript(t);
+            if (!check.configured) {
+                showToast("กรุณาตั้งค่า Google Apps Script URL ในแท็บ '4. รายงาน A4 & ตั้งค่า' หรือแนบไฟล์ PDF/รูปภาพโดยตรงด้านล่าง", "error");
+                return;
+            }
+            if (!check.ok) {
+                showToast(check.message, "error");
+                return;
+            }
+
+            const planInfo = check.data.plan || {};
+            const refInfo = check.data.reflection || {};
+
+            if (!planInfo.exists && !refInfo.exists) {
+                driveAuditMap[normalizeNameKey(activeTeacherName)] = {
+                    isEmptyOrUnreadable: true,
+                    statusLabel: planInfo.reason || "โฟลเดอร์ว่าง / ไม่พบไฟล์",
+                    checkedAt: new Date().toLocaleString('th-TH')
+                };
+                delete aiEvaluations[normalizeNameKey(activeTeacherName)];
+                saveState();
+                renderAllViews();
+                showToast(`ไม่พบไฟล์ข้างในลิงก์ Google Drive ของ ${activeTeacherName} (${planInfo.reason}) — AI จะไม่ให้คะแนน`, "error");
+                return;
+            }
+
+            const combinedText = [
+                planInfo.exists ? `=== ไฟล์แผนการสอน (${planInfo.files.join(", ")}) ===\n${planInfo.text}` : "",
+                refInfo.exists ? `=== ไฟล์บันทึกหลังแผน (${refInfo.files.join(", ")}) ===\n${refInfo.text}` : ""
+            ].filter(Boolean).join("\n\n");
+
+            document.getElementById("aiPlanTextContent").value = combinedText;
+            const evidenceLabel = `ไฟล์ Drive: ${[...(planInfo.files || []), ...(refInfo.files || [])].join(", ")}`;
+            await executeStrictGeminiEvaluation(activeTeacherName, combinedText, null, null, evidenceLabel);
+        }
+
+        async function executeStrictGeminiEvaluation(teacherName, planText, planFile, refFile, sourceEvidence) {
+            const apiKey = (localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || EMBEDDED_CUSTOM_GEMINI_KEY || "").trim();
+            if (!apiKey) {
+                showToast("กรุณากรอก Gemini API Key ในแท็บ '4. รายงาน A4 & ตั้งค่า' ก่อนใช้งาน AI ประเมินจริง", "error");
+                return null;
+            }
+
+            const hasBinaryFile = Boolean(planFile || refFile);
+            const cleanText = (planText || "").trim();
+            if (!hasBinaryFile && cleanText.length < 120) {
+                showToast("เนื้อหาเอกสารสั้นเกินไปหรือว่างเปล่า ระบบจะไม่ให้คะแนนจนกว่าจะมีเนื้อหาแผนการสอนจริง", "error");
+                return null;
+            }
+
+            const t = masterTeachers.find(x => normalizeNameKey(x.teacherName) === normalizeNameKey(teacherName)) || {};
+            const parts = [{
+                text: `คุณคือผู้เชี่ยวชาญด้านหลักสูตรและการนิเทศการสอน โรงเรียนมวกเหล็กวิทยา
+จงตรวจสอบเนื้อหาเอกสารที่แนบมานี้อย่างเคร่งครัดตามเกณฑ์ 5 ด้าน 20 ตัวชี้วัด (ข้อละ 1-5 คะแนน):
+- หากเอกสารที่แนบมา "ไม่ใช่แผนการจัดการเรียนรู้" หรือ "เป็นหน้าว่าง/ไม่มีสาระการสอนจริง" ให้ตั้งค่า isValidLessonPlan = false และให้คะแนนทุกข้อเป็น 0
+- หากเป็นแผนการจัดการเรียนรู้จริง ให้ประเมินตามหลักฐานที่ปรากฏจริงในเอกสารอย่างยุติธรรม (ห้ามเดาคะแนน)
+ครูผู้สอน: ${teacherName} | กลุ่มสาระฯ: ${t.department || "-"}
+เนื้อหาเอกสาร:
+${cleanText}`
+            }];
+            if (planFile) parts.push({ inlineData: { mimeType: planFile.mimeType, data: planFile.base64Data } });
+            if (refFile) parts.push({ inlineData: { mimeType: refFile.mimeType, data: refFile.base64Data } });
+
             document.getElementById("aiLoadingState").classList.remove("hidden");
             document.getElementById("aiResultContainer").classList.add("hidden");
 
             try {
-                const rec = await executeAiForTeacher(
-                    activeTeacherName,
-                    document.getElementById("aiPlanTextContent").value.trim(),
-                    uploadedPlanFile,
-                    uploadedRefFile
-                );
-                pushTeacherResultToWebhook(activeTeacherName);
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ role: "user", parts }],
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            responseSchema: {
+                                type: "OBJECT",
+                                properties: {
+                                    isValidLessonPlan: { type: "BOOLEAN" },
+                                    invalidReason: { type: "STRING" },
+                                    scores: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            q1_1:{type:"INTEGER"},q1_2:{type:"INTEGER"},q1_3:{type:"INTEGER"},q1_4:{type:"INTEGER"},
+                                            q2_1:{type:"INTEGER"},q2_2:{type:"INTEGER"},q2_3:{type:"INTEGER"},q2_4:{type:"INTEGER"},q2_5:{type:"INTEGER"},
+                                            q3_1:{type:"INTEGER"},q3_2:{type:"INTEGER"},q3_3:{type:"INTEGER"},
+                                            q4_1:{type:"INTEGER"},q4_2:{type:"INTEGER"},q4_3:{type:"INTEGER"},q4_4:{type:"INTEGER"},
+                                            q5_1:{type:"INTEGER"},q5_2:{type:"INTEGER"},q5_3:{type:"INTEGER"},q5_4:{type:"INTEGER"}
+                                        }
+                                    },
+                                    domainAnalysis: { type: "ARRAY", items: { type: "STRING" } },
+                                    strengths: { type: "STRING" },
+                                    suggestions: { type: "STRING" }
+                                },
+                                required: ["isValidLessonPlan", "scores", "domainAnalysis", "strengths", "suggestions"]
+                            }
+                        }
+                    })
+                });
+
+                if (!res.ok) {
+                    const errJson = await res.json().catch(() => ({}));
+                    throw new Error(errJson?.error?.message || `HTTP ${res.status}`);
+                }
+
+                const data = await res.json();
+                const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!rawText) throw new Error("ไม่ได้รับผลตอบกลับจาก Gemini AI");
+
+                const parsed = JSON.parse(rawText);
+                if (!parsed.isValidLessonPlan) {
+                    driveAuditMap[normalizeNameKey(teacherName)] = {
+                        isEmptyOrUnreadable: true,
+                        statusLabel: parsed.invalidReason || "เอกสารไม่ใช่แผนการสอน",
+                        checkedAt: new Date().toLocaleString('th-TH')
+                    };
+                    delete aiEvaluations[normalizeNameKey(teacherName)];
+                    saveState();
+                    renderAllViews();
+                    showToast(`AI ปฏิเสธการให้คะแนน: ${parsed.invalidReason || "ไม่พบเนื้อหาแผนการจัดการเรียนรู้จริงในไฟล์"}`, "error");
+                    return null;
+                }
+
+                const cleanScores = {};
+                let totalScore = 0;
+                RUBRIC_DOMAINS.forEach(d => d.items.forEach(it => {
+                    const v = Math.min(5, Math.max(1, Number(parsed.scores?.[it.id]) || 1));
+                    cleanScores[it.id] = v;
+                    totalScore += v;
+                }));
+
+                const rec = {
+                    verifiedFromRealContent: true,
+                    sourceEvidence: sourceEvidence || "ไฟล์เอกสารที่อัปโหลดจริง",
+                    evaluatedAt: new Date().toLocaleString('th-TH', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+                    modelName: "Gemini 3 Flash (Verified Real Doc)",
+                    scores: cleanScores,
+                    totalScore,
+                    domainAnalysis: parsed.domainAnalysis || [],
+                    strengths: parsed.strengths || "",
+                    suggestions: parsed.suggestions || ""
+                };
+
+                delete driveAuditMap[normalizeNameKey(teacherName)];
+                aiEvaluations[normalizeNameKey(teacherName)] = rec;
+                saveState();
                 renderAllViews();
-                showToast(`${isAuto ? '[AI อัตโนมัติ] ' : ''}ประเมิน ${activeTeacherName} สำเร็จ (${rec.totalScore}/100)`, "success");
+                showToast(`Gemini AI วิเคราะห์เนื้อหาจริงของ ${teacherName} สำเร็จ (${totalScore}/100 คะแนน)`, "success");
+                return rec;
+            } catch (err) {
+                showToast(`เกิดข้อผิดพลาดในการเรียก Gemini API: ${err.message}`, "error");
+                return null;
             } finally {
-                isAutoAiRunning = false;
                 document.getElementById("aiLoadingState").classList.add("hidden");
                 document.getElementById("aiResultContainer").classList.remove("hidden");
             }
         }
 
-        async function runBatchAutoAiForCompleteTeachers() {
+        async function runGeminiAiEvaluation() {
+            if (!activeTeacherName || isAutoAiRunning) return;
+            isAutoAiRunning = true;
+            try {
+                const txt = document.getElementById("aiPlanTextContent").value.trim();
+                const filesNames = [uploadedPlanFile?.fileName, uploadedRefFile?.fileName].filter(Boolean).join(", ");
+                const evidence = filesNames ? `ไฟล์แนบ: ${filesNames}` : "ข้อความแผนการสอนที่วางตรวจ";
+                await executeStrictGeminiEvaluation(activeTeacherName, txt, uploadedPlanFile, uploadedRefFile, evidence);
+            } finally {
+                isAutoAiRunning = false;
+            }
+        }
+
+        async function runBatchVerifiedAiFromDrive() {
+            const apiKey = (localStorage.getItem(STORAGE_KEYS.GEMINI_KEY) || EMBEDDED_CUSTOM_GEMINI_KEY || "").trim();
+            const scriptUrl = (localStorage.getItem(STORAGE_KEYS.SCRIPT_URL) || EMBEDDED_APPS_SCRIPT_URL || "").trim();
+
+            if (!apiKey || !scriptUrl) {
+                showToast("ต้องตั้งค่าทั้ง Gemini API Key และ Google Apps Script URL (ในแท็บ 4) ก่อนเพื่อให้ AI อ่านไฟล์จริงใน Google Drive", "error");
+                switchTab("reports");
+                return;
+            }
+
             if (isAutoAiRunning) return;
-            const targets = masterTeachers.filter(t => t.hasPlan && t.hasReflection && !aiEvaluations[normalizeNameKey(t.teacherName)]);
+            const targets = masterTeachers.filter(t => (t.planLink || t.reflectionLink) && !aiEvaluations[normalizeNameKey(t.teacherName)]);
             if (!targets.length) {
-                showToast("ครูที่มีเอกสารครบ 2/2 ทุกคนได้รับการประเมินจาก AI เรียบร้อยแล้ว", "success");
+                showToast("ไม่มีรายการใหม่ที่รอตรวจสอบไฟล์ใน Google Drive", "info");
                 return;
             }
 
             isAutoAiRunning = true;
             const banner = document.getElementById("batchAiProgressBanner");
             banner.classList.remove("hidden");
+            let validCount = 0, emptyCount = 0;
 
             try {
                 for (let i = 0; i < targets.length; i++) {
+                    const t = targets[i];
                     const pct = Math.round((i / targets.length) * 100);
-                    document.getElementById("batchAiProgressText").textContent = `AI กำลังประเมิน (${i + 1}/${targets.length}): ${targets[i].teacherName}`;
+                    document.getElementById("batchAiProgressText").textContent = `กำลังตรวจไฟล์จริงใน Drive (${i + 1}/${targets.length}): ${t.teacherName}`;
                     document.getElementById("batchAiProgressBar").style.width = `${pct}%`;
                     document.getElementById("batchAiProgressPercent").textContent = `${pct}%`;
-                    await executeAiForTeacher(targets[i].teacherName);
+
+                    const check = await inspectRealDriveLinkViaScript(t);
+                    if (check.ok && (check.data.plan?.exists || check.data.reflection?.exists)) {
+                        const pInfo = check.data.plan || {};
+                        const rInfo = check.data.reflection || {};
+                        const combinedText = [
+                            pInfo.exists ? `=== แผนการสอน (${pInfo.files.join(", ")}) ===\n${pInfo.text}` : "",
+                            rInfo.exists ? `=== บันทึกหลังแผน (${rInfo.files.join(", ")}) ===\n${rInfo.text}` : ""
+                        ].filter(Boolean).join("\n\n");
+                        const evLabel = `Drive: ${[...(pInfo.files || []), ...(rInfo.files || [])].join(", ")}`;
+                        const res = await executeStrictGeminiEvaluation(t.teacherName, combinedText, null, null, evLabel);
+                        if (res) validCount++;
+                        else emptyCount++;
+                    } else {
+                        driveAuditMap[normalizeNameKey(t.teacherName)] = {
+                            isEmptyOrUnreadable: true,
+                            statusLabel: check.data?.plan?.reason || "โฟลเดอร์ว่าง / ไม่พบไฟล์",
+                            checkedAt: new Date().toLocaleString('th-TH')
+                        };
+                        emptyCount++;
+                        saveState();
+                    }
                 }
                 document.getElementById("batchAiProgressBar").style.width = "100%";
                 document.getElementById("batchAiProgressPercent").textContent = "100%";
                 renderAllViews();
-                showToast(`AI ประเมินอัตโนมัติครบทั้ง ${targets.length} คนเรียบร้อยแล้ว!`, "success");
-                setTimeout(() => banner.classList.add("hidden"), 1800);
+                showToast(`ตรวจเสร็จสิ้น: พบไฟล์จริงและประเมินแล้ว ${validCount} คน | โฟลเดอร์ว่าง/ไม่พบไฟล์ ${emptyCount} คน`, "success");
+                setTimeout(() => banner.classList.add("hidden"), 2500);
             } finally {
                 isAutoAiRunning = false;
             }
@@ -1956,18 +2144,32 @@
         function renderAiEvaluationResultForActiveTeacher() {
             const box = document.getElementById("aiResultContainer");
             const ts = document.getElementById("aiResultTimestamp");
-            const ai = aiEvaluations[normalizeNameKey(activeTeacherName)];
+            const key = normalizeNameKey(activeTeacherName);
+            const ai = aiEvaluations[key];
+            const audit = driveAuditMap[key];
+
             if (!ai) {
                 ts.textContent = "";
-                box.innerHTML = `<div class="py-8 text-center text-xs text-slate-400 border border-dashed rounded-xl">ยังไม่มีผลประเมินจาก AI สำหรับครูท่านนี้</div>`;
+                if (audit && audit.isEmptyOrUnreadable) {
+                    box.innerHTML = `<div class="p-5 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 text-xs sm:text-sm space-y-1">
+                        <div class="font-bold">⚠ ไม่สามารถให้คะแนน AI ได้ (${audit.statusLabel})</div>
+                        <p class="text-xs text-rose-700">ระบบตรวจพบว่าลิงก์ Google Drive ไม่มีไฟล์ข้างใน หรือยังไม่เปิดสิทธิ์เข้าถึง จึงระงับการให้คะแนนอัตโนมัติ (ตรวจสอบเมื่อ ${audit.checkedAt})</p>
+                    </div>`;
+                } else {
+                    box.innerHTML = `<div class="py-8 text-center text-xs text-slate-500 border border-dashed rounded-xl space-y-1">
+                        <p class="font-semibold text-slate-700">ยังไม่มีผลประเมินจาก AI สำหรับครูท่านนี้</p>
+                        <p>กรุณากดปุ่ม "ตรวจสอบไฟล์ข้างใน Google Drive & ประเมินด้วย AI" หรือแนบไฟล์ PDF/รูปภาพจริงด้านซ้าย</p>
+                    </div>`;
+                }
                 return;
             }
+
             ts.textContent = `ประเมินเมื่อ: ${ai.evaluatedAt}`;
             const q = classifyQuality(ai.totalScore);
             box.innerHTML = `
-                <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3.5 flex justify-between items-center">
+                <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <div>
-                        <span class="text-xs text-indigo-700 font-semibold block">คะแนนประเมินส่วนที่ 2 (${ai.modelName})</span>
+                        <span class="text-xs text-emerald-800 font-bold block">✓ หลักฐานที่ตรวจ: ${ai.sourceEvidence || "ไฟล์เอกสารจริง"}</span>
                         <span class="text-2xl font-extrabold text-indigo-950">${ai.totalScore} / 100 (${ai.totalScore.toFixed(1)}%)</span>
                     </div>
                     <span class="px-3 py-1 rounded-full text-xs font-bold ${q.badgeClass}">ระดับ${q.label}</span>
@@ -2001,31 +2203,6 @@
                     <td class="py-2.5 px-3 text-center bg-gold-100">${comp.compositeScore !== null ? comp.compositeScore.toFixed(2) + '%' : '-'}</td>
                 </tr>
             `;
-        }
-
-        function pushTeacherResultToWebhook(teacherName) {
-            const url = (localStorage.getItem(STORAGE_KEYS.SCRIPT_URL) || EMBEDDED_APPS_SCRIPT_URL || "").trim();
-            if (!url) return;
-            const t = masterTeachers.find(x => x.teacherName === teacherName) || { department: "-" };
-            const comp = calculateTeacherComposite(teacherName);
-            fetch(url, {
-                method: "POST",
-                mode: "no-cors",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify({
-                    record: {
-                        updatedAt: new Date().toLocaleString('th-TH'),
-                        teacherName,
-                        department: t.department,
-                        evaluatorCount: comp.evaluatorCount,
-                        part1Avg: comp.part1Avg,
-                        part2Score: comp.part2Score,
-                        weightRatio,
-                        compositeScore: comp.compositeScore,
-                        qualityLabel: comp.quality ? comp.quality.label : "รอประเมิน"
-                    }
-                })
-            }).catch(() => {});
         }
 
         // =========================================================================
@@ -2099,7 +2276,12 @@
 
         function renderReportCards() {
             const comps = masterTeachers.map(t => calculateTeacherComposite(t.teacherName)).filter(c => c.compositeScore !== null);
-            document.getElementById("reportCardsGrid").innerHTML = comps.map(c => {
+            const grid = document.getElementById("reportCardsGrid");
+            if (!comps.length) {
+                grid.innerHTML = `<div class="col-span-full py-6 text-center text-xs text-slate-500">ยังไม่มีรายการประเมินที่เสร็จสมบูรณ์</div>`;
+                return;
+            }
+            grid.innerHTML = comps.map(c => {
                 const t = masterTeachers.find(x => x.teacherName === c.teacherName) || { department: "-" };
                 const safeName = c.teacherName.replace(/'/g, "\\'");
                 return `
@@ -2134,7 +2316,7 @@
                         <div>
                             <h1 class="text-base sm:text-lg font-bold">แบบสรุปผลการประเมินคุณภาพแผนการจัดการเรียนรู้และบันทึกหลังแผน</h1>
                             <h2 class="text-sm sm:text-base font-bold">โรงเรียนมวกเหล็กวิทยา สำนักงานเขตพื้นที่การศึกษามัธยมศึกษาสระบุรี</h2>
-                            <p class="text-xs">ระบบประเมิน 2 ส่วน (ค่าเฉลี่ยคณะกรรมการ ${label1}% : ระบบ AI อัตโนมัติ ${label2}%)</p>
+                            <p class="text-xs">ระบบประเมิน 2 ส่วน (ค่าเฉลี่ยคณะกรรมการ ${label1}% : ระบบ AI ตรวจจากไฟล์จริง ${label2}%)</p>
                         </div>
                     </div>
 
@@ -2176,14 +2358,14 @@
                     </div>
 
                     <div class="mb-2.5 text-xs">
-                        <h3 class="font-bold bg-slate-100 border border-black px-2.5 py-1 mb-1.5">ส่วนที่ 3 ตารางสรุปคะแนนเปรียบเทียบ (ค่าเฉลี่ยคณะกรรมการ + AI อัตโนมัติ)</h3>
+                        <h3 class="font-bold bg-slate-100 border border-black px-2.5 py-1 mb-1.5">ส่วนที่ 3 ตารางสรุปคะแนนเปรียบเทียบ (ค่าเฉลี่ยคณะกรรมการ + AI)</h3>
                         <table class="w-full border-collapse border border-black">
                             <thead>
                                 <tr class="bg-slate-100">
                                     <th class="border border-black px-2 py-1 text-left">องค์ประกอบการประเมินคุณภาพ (5 ด้าน 20 ตัวชี้วัด)</th>
                                     <th class="border border-black px-2 py-1 w-14 text-center">เต็ม</th>
                                     <th class="border border-black px-2 py-1 w-24 text-center">เฉลี่ยกรรมการ</th>
-                                    <th class="border border-black px-2 py-1 w-24 text-center">AI อัตโนมัติ</th>
+                                    <th class="border border-black px-2 py-1 w-24 text-center">AI (ไฟล์จริง)</th>
                                     <th class="border border-black px-2 py-1 w-24 text-center">คะแนนสุทธิ</th>
                                 </tr>
                             </thead>
@@ -2321,12 +2503,14 @@
         }
 
         function exportEvaluationsCSV() {
-            const headers = ["ชื่อ-นามสกุล", "กลุ่มสาระฯ", "ส่งแผนฯ", "ส่งบันทึกหลังแผน", "จำนวนกรรมการ", "เฉลี่ยกรรมการ (%)", "คะแนน AI (%)", "สุทธิรวม (%)", "ระดับคุณภาพ"];
+            const headers = ["ชื่อ-นามสกุล", "กลุ่มสาระฯ", "ส่งลิงก์แผนฯ", "ส่งลิงก์บันทึกหลังแผน", "จำนวนกรรมการ", "เฉลี่ยกรรมการ (%)", "คะแนน AI (%)", "หลักฐานไฟล์ AI", "สุทธิรวม (%)", "ระดับคุณภาพ"];
             const rows = masterTeachers.map(t => {
                 const c = calculateTeacherComposite(t.teacherName);
+                const audit = driveAuditMap[normalizeNameKey(t.teacherName)];
+                const evidence = c.aiObj ? c.aiObj.sourceEvidence : (audit?.statusLabel || "-");
                 return [
                     t.teacherName, t.department, t.hasPlan ? "ส่งแล้ว" : "ยังไม่ส่ง", t.hasReflection ? "ส่งแล้ว" : "ยังไม่ส่ง",
-                    c.evaluatorCount, c.part1Avg ?? "-", c.part2Score ?? "-", c.compositeScore ?? "-", c.quality ? c.quality.label : "รอประเมิน"
+                    c.evaluatorCount, c.part1Avg ?? "-", c.part2Score ?? "-", evidence, c.compositeScore ?? "-", c.quality ? c.quality.label : "รอประเมิน"
                 ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(",");
             });
             const blob = new Blob(["\uFEFF" + [headers.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
@@ -2360,7 +2544,7 @@
             el.className = `pointer-events-auto px-4 py-2.5 rounded-xl shadow-lg border-l-4 text-white text-xs sm:text-sm transition-opacity duration-300 ${bg}`;
             el.textContent = msg;
             box.appendChild(el);
-            setTimeout(() => { el.classList.add("opacity-0"); setTimeout(() => el.remove(), 300); }, 3200);
+            setTimeout(() => { el.classList.add("opacity-0"); setTimeout(() => el.remove(), 300); }, 3600);
         }
     </script>
 </body>
